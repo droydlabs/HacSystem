@@ -6,15 +6,19 @@
 //
 
 import SwiftUI
+
 struct ControlView: View {
-    @State private var selectedOption = "Device 1"
-    @State private var options: [String] = ["Device 1", "Device 2", "Device 3"]
+    @StateObject private var bluetoothManager = BluetoothNewManager()
     
     @State private var device1: Int = 2
     @State private var device2: Int = 2
     @State private var device3: Int = 2
     
-    @State private var showAddNewSheet = false
+    @State private var battery: Int = 2
+    
+    @State private var showingScanner = false
+    
+    private let newValueUuid = UUID()
     
     var body: some View {
         
@@ -25,51 +29,80 @@ struct ControlView: View {
                     .ignoresSafeArea()
 
             VStack {
-                Picker("Please choose an option", selection: $selectedOption) {
-                    ForEach(options, id: \.self) { option in
-                        Text(option)
-                    }
 
-                    Text("➕ Add New…")
-                        .foregroundColor(.blue)
-                        .tag("__add_new__")
-
-                }
-                .pickerStyle(MenuPickerStyle())
-                .padding()
-                .frame(width: UIScreen.main.bounds.width * 0.85)
-                .background(Color.white)
-                .cornerRadius(10)
-                .onChange(of: selectedOption) { newValue in
-                    if newValue == "__add_new__" {
-                        // Revert selection and show action
-                        selectedOption = options.first ?? ""
-                        showAddNewSheet = true
+                if bluetoothManager.selectedDevices.isEmpty {
+                    
+                    Button(action: {
+                        showingScanner = true
+                    }) {
+                        Text("Add Device")
+                            .padding()
+                            .frame(width: UIScreen.main.bounds.width * 0.85)
+                            .background(Color.white)
+                            .cornerRadius(10)
                     }
-                }
-                .sheet(isPresented: $showAddNewSheet) {
-                    AddNewOptionView { newOption in
-                        if let newOption = newOption, !newOption.isEmpty {
-                            options.append(newOption)
-                            selectedOption = newOption
+                } else {
+                    Picker("Select a Device", selection: $bluetoothManager.selectedDeviceId) {
+                        ForEach(bluetoothManager.selectedDevices) { device in
+                            Text(device.name)
+                                .tag(device.id)
+                        }
+                        
+                        Text("➕ Add New…")
+                            .foregroundColor(.blue)
+                            .tag(newValueUuid)
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                    .padding()
+                    .frame(width: UIScreen.main.bounds.width * 0.85)
+                    .background(Color.white)
+                    .cornerRadius(10)
+                    .onChange(of: bluetoothManager.selectedDeviceId) { newValue in
+                        if newValue == newValueUuid {
+                            // Revert selection and show action
+                            bluetoothManager.selectedDeviceId = bluetoothManager.selectedDevices.first?.id
+                            showingScanner = true
                         }
                     }
+               
                 }
-                .padding()
-
+                
                 Spacer()
 
+                BatteryIconView(level: $battery)
+                
                 HStack {
-                    LevelView(label: "Back", level: $device1)
+                    LevelView(label: "Back", level: $device1) { newLevel in
+                        print("NINO \(newLevel)")
+                    }
+                    
                     LevelView(label: "Left", level: $device2)
                     LevelView(label: "Right", level: $device3)
                 }
+                .onReceive(bluetoothManager.$selectedDevices) { newValue in
+                    guard let device = bluetoothManager.selectedDevices.first(
+                        where: { $0.id == bluetoothManager.selectedDeviceId }
+                    ) else { return }
+                    
+                    device1 = device.info?.tpu1 ?? 1
+                    device2 = device.info?.tpu2 ?? 1
+                    device3 = device.info?.tpu3 ?? 1
+                    battery = device.info?.batteryLevel ?? 1
+                }
 
                 Spacer()
-
             }
 
             Spacer()
+        }
+        .sheet(isPresented: $showingScanner) {
+            ScanDevicesView(bluetoothManager: bluetoothManager)
+        }
+        .onAppear {
+            bluetoothManager.startScanning()
+        }
+        .onDisappear {
+            bluetoothManager.stopScanning()
         }
 
     }

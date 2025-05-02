@@ -8,11 +8,12 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var bluetoothManager = BluetoothManager()
+    @StateObject private var bluetoothManager = BluetoothNewManager()
     
     var body: some View {
         if bluetoothManager.isBluetoothEnabled {
             ControlView()
+//            SelectedDevicesView()
         } else {
             BluetoothDisabledView()
         }

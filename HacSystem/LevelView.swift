@@ -13,7 +13,8 @@ struct LevelView: View {
     private let totalLevels: Int = 4
 
     @GestureState private var dragOffset: CGFloat = 0
-    
+
+    var onLevelChange: ((Int) -> Void)? = nil
 
     var body: some View {
         VStack {
@@ -52,12 +53,14 @@ struct LevelView: View {
                             let finalHeight = CGFloat(level + 1) * levelHeight - value.translation.height
                             let snappedLevel = Int((finalHeight / levelHeight).rounded()) - 1
                             level = min(max(snappedLevel, 0), totalLevels - 1)
+                            onLevelChange?(level)
                         }
                 )
                 .onTapGesture { location in
                     let tapY = location.y
                     let levelIndex = Int(((fullHeight - tapY) / levelHeight).rounded(.up)) - 1
                     level = min(max(levelIndex, 0), totalLevels - 1)
+                    onLevelChange?(level)
                 }
                 .animation(.easeInOut(duration: 0.2), value: level)
             }
