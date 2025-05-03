@@ -69,28 +69,31 @@ struct ControlView: View {
                 
                 Spacer()
 
-                BatteryIconView(level: $battery)
-                
-                HStack {
-                    LevelView(label: "Back", level: $device1) {
-                        bluetoothManager.sendToDevice(deviceOffset: 1, value: $0)
-                    }                    
-                    LevelView(label: "Left", level: $device2) {
-                        bluetoothManager.sendToDevice(deviceOffset: 2, value: $0)
-                    }
-                    LevelView(label: "Right", level: $device3) {
-                        bluetoothManager.sendToDevice(deviceOffset: 3, value: $0)
-                    }
-                }
-                .onReceive(bluetoothManager.$selectedDevices) { newValue in
-                    guard let device = bluetoothManager.selectedDevices.first(
-                        where: { $0.id == bluetoothManager.selectedDeviceId }
-                    ) else { return }
+                if bluetoothManager.selectedDeviceId != nil {
                     
-                    device1 = device.info?.tpu1 ?? 1
-                    device2 = device.info?.tpu2 ?? 1
-                    device3 = device.info?.tpu3 ?? 1
-                    battery = device.info?.batteryLevel ?? 1
+                    BatteryIconView(level: $battery)
+                    
+                    HStack {
+                        LevelView(label: "Back", level: $device1) {
+                            bluetoothManager.sendToDevice(deviceOffset: 1, value: $0)
+                        }
+                        LevelView(label: "Left", level: $device2) {
+                            bluetoothManager.sendToDevice(deviceOffset: 2, value: $0)
+                        }
+                        LevelView(label: "Right", level: $device3) {
+                            bluetoothManager.sendToDevice(deviceOffset: 3, value: $0)
+                        }
+                    }
+                    .onReceive(bluetoothManager.$selectedDevices) { newValue in
+                        guard let device = bluetoothManager.selectedDevices.first(
+                            where: { $0.id == bluetoothManager.selectedDeviceId }
+                        ) else { return }
+                        
+                        device1 = device.info?.tpu1 ?? 1
+                        device2 = device.info?.tpu2 ?? 1
+                        device3 = device.info?.tpu3 ?? 1
+                        battery = device.info?.batteryLevel ?? 1
+                    }
                 }
 
                 Spacer()

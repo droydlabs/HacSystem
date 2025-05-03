@@ -13,6 +13,8 @@ class BluetoothNewManager: NSObject, ObservableObject, CBCentralManagerDelegate,
     @Published var selectedDeviceId: UUID?
     @Published var isBluetoothEnabled: Bool = false
     
+    private var isWriting: Bool = false
+    
     private var centralManager: CBCentralManager!
     private var peripherals: [UUID: CBPeripheral] = [:]
     private var nusTxCharacteristic: CBCharacteristic!
@@ -65,6 +67,8 @@ class BluetoothNewManager: NSObject, ObservableObject, CBCentralManagerDelegate,
                                       name: peripheral.name ?? "Unknown",
                                       advertisementData: advertisementData)
 
+        guard !isWriting else { return }
+        
         DispatchQueue.main.async {
             // Check if the device being scanned is the selected device
            if let selectedDeviceId = self.selectedDeviceId,
@@ -86,6 +90,7 @@ class BluetoothNewManager: NSObject, ObservableObject, CBCentralManagerDelegate,
                        let batteryBar = Int(manufacturerData[3])
 
                        let info = DeviceInfo(batteryLevel: batteryBar, tpu1: tpu1, tpu2: tpu2, tpu3: tpu3)
+                       print("NINOTEST battery:\(batteryBar), 1:\(tpu1), 2:\(tpu2), 3:\(tpu3)")
                        
                        let updatedDevice = DiscoveredDevice(id: device.id,
                                                             name: device.name, advertisementData: device.advertisementData, info: info)
@@ -134,8 +139,9 @@ class BluetoothNewManager: NSObject, ObservableObject, CBCentralManagerDelegate,
         message = MessageData(offset: deviceOffset, value: value)
         
         if let peripheral = peripherals[selectedDeviceId] {
-           centralManager.connect(peripheral, options: nil)
-           peripheral.delegate = self
+            isWriting = true
+            centralManager.connect(peripheral, options: nil)
+            peripheral.delegate = self
        }
     }
     
@@ -192,11 +198,14 @@ class BluetoothNewManager: NSObject, ObservableObject, CBCentralManagerDelegate,
     func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
         if let error = error {
             print("Failed to write value: \(error.localizedDescription)")
+            isWriting = false
         } else {
             print("Data written successfully! Offset: \(message?.offset ?? 0) Value: \(message?.value ?? 0)")
             message = nil
             
             centralManager.cancelPeripheralConnection(peripheral)
+            
+            isWriting = false
         }
     }
 
