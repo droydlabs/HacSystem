@@ -140,14 +140,14 @@ class BluetoothNewManager: NSObject, ObservableObject, CBCentralManagerDelegate,
     }
     
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        guard let message else { return }
+        guard message != nil else { return }
         
         peripheral.discoverServices([CBUUID(string: "6E400001-B5A3-F393-E0A9-E50E24DCCA9E")])
         
     }
     
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
-        guard let message else { return }
+        guard message != nil else { return }
         
         if let services = peripheral.services {
             for service in services {
@@ -193,7 +193,10 @@ class BluetoothNewManager: NSObject, ObservableObject, CBCentralManagerDelegate,
         if let error = error {
             print("Failed to write value: \(error.localizedDescription)")
         } else {
-            print("Data written successfully!")
+            print("Data written successfully! Offset: \(message?.offset ?? 0) Value: \(message?.value ?? 0)")
+            message = nil
+            
+            centralManager.cancelPeripheralConnection(peripheral)
         }
     }
 
