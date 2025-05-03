@@ -72,12 +72,15 @@ struct ControlView: View {
                 BatteryIconView(level: $battery)
                 
                 HStack {
-                    LevelView(label: "Back", level: $device1) { newLevel in
-                        print("NINO \(newLevel)")
+                    LevelView(label: "Back", level: $device1) {
+                        bluetoothManager.sendToDevice(deviceOffset: 1, value: $0)
+                    }                    
+                    LevelView(label: "Left", level: $device2) {
+                        bluetoothManager.sendToDevice(deviceOffset: 2, value: $0)
                     }
-                    
-                    LevelView(label: "Left", level: $device2)
-                    LevelView(label: "Right", level: $device3)
+                    LevelView(label: "Right", level: $device3) {
+                        bluetoothManager.sendToDevice(deviceOffset: 3, value: $0)
+                    }
                 }
                 .onReceive(bluetoothManager.$selectedDevices) { newValue in
                     guard let device = bluetoothManager.selectedDevices.first(

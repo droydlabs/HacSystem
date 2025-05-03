@@ -15,8 +15,11 @@ class BluetoothNewManager: NSObject, ObservableObject, CBCentralManagerDelegate,
     
     private var centralManager: CBCentralManager!
     private var peripherals: [UUID: CBPeripheral] = [:]
+    private var nusTxCharacteristic: CBCharacteristic!
 
     private var shouldStartScanning = false
+    
+    private var message: MessageData?
 
     override init() {
         super.init()
@@ -71,8 +74,6 @@ class BluetoothNewManager: NSObject, ObservableObject, CBCentralManagerDelegate,
                if let index = self.selectedDevices.firstIndex(where: { $0.id == device.id }) {
                    // Create a new updated device with the latest advertising data and RSSI
                    
-                   
-                   
                    if let manufacturerData = device.advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data {
                        guard manufacturerData.count >= 4 else {
                            print("Manufacturer data is too short")
@@ -110,10 +111,6 @@ class BluetoothNewManager: NSObject, ObservableObject, CBCentralManagerDelegate,
         }
     }
     
-    func parseManufacturerData(_ data: Data, discoveredDevice: DiscoveredDevice) {
-            }
-
-    
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         peripherals[peripheral.identifier] = nil
     }
@@ -125,73 +122,78 @@ class BluetoothNewManager: NSObject, ObservableObject, CBCentralManagerDelegate,
         
         selectedDeviceId = device.id
         
-//        if let peripheral = peripherals[device.id] {
-//           centralManager.connect(peripheral, options: nil)
-//           peripheral.delegate = self
-//       }
-        
     }
-
+    
     func setSelectedDevice(_ device: DiscoveredDevice) {
         selectedDeviceId = device.id
     }
     
+    func sendToDevice(deviceOffset: Int, value: Int) {
+        guard let selectedDeviceId else { return }
+        
+        message = MessageData(offset: deviceOffset, value: value)
+        
+        if let peripheral = peripherals[selectedDeviceId] {
+           centralManager.connect(peripheral, options: nil)
+           peripheral.delegate = self
+       }
+    }
+    
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        peripheral.discoverServices([CBUUID(string: "180F"), CBUUID(string: "6E400001-B5A3-F393-E0A9-E50E24DCCA9E")]) // Battery Service
+        guard let message else { return }
+        
+        peripheral.discoverServices([CBUUID(string: "6E400001-B5A3-F393-E0A9-E50E24DCCA9E")])
         
     }
     
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
+        guard let message else { return }
+        
         if let services = peripheral.services {
             for service in services {
-                if service.uuid == CBUUID(string: "180F") {
-                    peripheral.discoverCharacteristics([CBUUID(string: "2A19")], for: service)
-                }
-                
                 if service.uuid == CBUUID(string: "6E400001-B5A3-F393-E0A9-E50E24DCCA9E") {
-                    peripheral.discoverCharacteristics([CBUUID(string: "6E400001-B5A3-F393-E0A9-E50E24DCCA9E")], for: service)
+                    peripheral.discoverCharacteristics([CBUUID(string: "6E400002-B5A3-F393-E0A9-E50E24DCCA9E")], for: service)
                 }
             }
         }
     }
     
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
-        if service.uuid == CBUUID(string: "6E400001-B5A3-F393-E0A9-E50E24DCCA9E") {
-            if let characteristics = service.characteristics {
-                for characteristic in characteristics {
-                    print("NINOTEST \(characteristic.uuid)")
-                }
-            }
-        }
+        guard let message else { return }
         
-        if let characteristics = service.characteristics {
-            for characteristic in characteristics {
-                if characteristic.uuid == CBUUID(string: "2A19") {
-                    peripheral.readValue(for: characteristic)
+        for characteristic in service.characteristics! {
+            if characteristic.uuid == CBUUID(string: "6E400002-B5A3-F393-E0A9-E50E24DCCA9E") { // TX characteristic UUID
+                nusTxCharacteristic = characteristic
+                
+                guard let selectedDevice = selectedDevices.first(where: { $0.id == selectedDeviceId }), let info = selectedDevice.info else { return }
+                
+                var tpu1Value: UInt8 = UInt8(info.tpu1 ?? 0) // Change this value to set TPU1
+                var tpu2Value: UInt8 = UInt8(info.tpu2 ?? 0) // Change this value to set TPU2
+                var tpu3Value: UInt8 = UInt8(info.tpu3 ?? 0) // Change this value to set TPU3
+                
+                switch message.offset {
+                case 1: tpu1Value = UInt8(message.value)
+                case 2: tpu2Value = UInt8(message.value)
+                case 3: tpu3Value = UInt8(message.value)
+                default:
+                    break;
                 }
+
+                let command: [UInt8] = [0x01, tpu1Value, tpu2Value, tpu3Value]
+                let dataToWrite = Data(command)
+                peripheral.writeValue(dataToWrite, for: nusTxCharacteristic, type: .withResponse)
+
             }
         }
     }
+    
 
-    func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
-        if characteristic.uuid == CBUUID(string: "2A19"), let value = characteristic.value {
-            let batteryLevel = value.first ?? 0
-            
-            DispatchQueue.main.async {
-                if let index = self.selectedDevices.firstIndex(where: { $0.id == peripheral.identifier }), batteryLevel >= 0 {
-                    var updatedDevice = self.selectedDevices[index]
-                    
-                    self.selectedDevices[index] = updatedDevice
-                }
-            }
-            
-            // After reading, disconnect from the peripheral
-            centralManager.cancelPeripheralConnection(peripheral)
-        }
-        
-        if characteristic.uuid == CBUUID(string: "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"), let value = characteristic.value {
-            print("NINOTEST \(value)")
-            centralManager.cancelPeripheralConnection(peripheral)
+    
+    func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
+        if let error = error {
+            print("Failed to write value: \(error.localizedDescription)")
+        } else {
+            print("Data written successfully!")
         }
     }
 
@@ -214,4 +216,9 @@ struct DiscoveredDevice: Identifiable, Equatable {
     static func == (lhs: DiscoveredDevice, rhs: DiscoveredDevice) -> Bool {
             return lhs.id == rhs.id
         }
+}
+
+struct MessageData {
+    let offset: Int
+    let value: Int
 }
