@@ -8,10 +8,9 @@
 import SwiftUI
 
 struct LevelView: View {
-    let label: String
+    
     @Binding var level: Int
     private let totalLevels: Int = 4
-
     @GestureState private var dragOffset: CGFloat = 0
 
     var onLevelChange: ((Int) -> Void)? = nil
@@ -78,15 +77,15 @@ struct LevelView: View {
                                   startPoint: .top,
                                   endPoint: .bottom)
         case 1:
-            return LinearGradient(colors: [.yellow.opacity(0.4), .orange],
+            return LinearGradient(colors: [AppColor.purple, AppColor.blue],
                                   startPoint: .top,
                                   endPoint: .bottom)
         case 2:
-            return LinearGradient(colors: [.yellow.opacity(0.7), .orange],
+            return LinearGradient(colors: [AppColor.orange, .yellow],
                                   startPoint: .top,
                                   endPoint: .bottom)
         default:
-            return LinearGradient(colors: [.yellow, .orange],
+            return LinearGradient(colors: [AppColor.red, AppColor.orange],
                                   startPoint: .top,
                                   endPoint: .bottom)
         }
