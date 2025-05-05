@@ -140,7 +140,8 @@ extension BluetoothNewManager: CBCentralManagerDelegate {
        }
             
         // Update scannedDevices with the latest data
-        if self.scannedDevices.contains(where: { $0.id == device.id }) == false {
+        if self.scannedDevices.contains(where: { $0.id == device.id }) == false,
+           device.name.lowercased().hasPrefix("hac"){
             self.scannedDevices.append(device)
         } else if let index = self.scannedDevices.firstIndex(where: { $0.id == device.id }) {
 

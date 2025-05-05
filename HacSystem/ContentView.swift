@@ -13,7 +13,6 @@ struct ContentView: View {
     var body: some View {
         if bluetoothManager.isBluetoothEnabled {
             ControlView()
-//            SelectedDevicesView()
         } else {
             BluetoothDisabledView()
         }
