@@ -71,6 +71,15 @@ struct ControlView: View {
 
                 if bluetoothManager.selectedDeviceId != nil {
                     
+                    Image(.logo)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 250, height: 150)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(Color.white.opacity(0.2))
+                        )
+                
                     BatteryIconView(level: $battery)
                     
                     HStack {

@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "hacs.png",
+      "filename" : "haclogowhite.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,7 +13,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "hacs 1.png",
+      "filename" : "haclogowhite 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -25,7 +25,7 @@
           "value" : "tinted"
         }
       ],
-      "filename" : "hacs 2.png",
+      "filename" : "haclogowhite 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
