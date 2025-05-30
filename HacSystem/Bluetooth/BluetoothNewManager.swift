@@ -91,8 +91,10 @@ extension BluetoothNewManager: CBCentralManagerDelegate {
         
         peripherals[peripheral.identifier] = peripheral
 
+        let localName = advertisementData[CBAdvertisementDataLocalNameKey] as? String
+        let deviceName = localName ?? peripheral.name ?? "Unknown"
         let device = DiscoveredDevice(id: peripheral.identifier,
-                                      name: peripheral.name ?? "Unknown",
+                                      name: deviceName,
                                       advertisementData: advertisementData)
 
         if let selectedDeviceId = self.selectedDeviceId, selectedDeviceId == device.id,
