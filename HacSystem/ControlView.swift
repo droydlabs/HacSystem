@@ -15,6 +15,7 @@ struct ControlView: View {
     @State private var device3: Int = 2
     
     @State private var battery: Int = 2
+    @State private var signalStrength: SignalStrength = .average
     
     @State private var showingScanner = false
     
@@ -80,7 +81,10 @@ struct ControlView: View {
                                 .fill(Color.white.opacity(0.2))
                         )
                 
-                    BatteryIconView(level: $battery)
+                    HStack {
+                        SignalStrengthView(strength: $signalStrength)
+                        BatteryIconView(level: $battery)
+                    }
                     
                     HStack {
                         LevelView(level: $device1) {
@@ -103,6 +107,7 @@ struct ControlView: View {
                         device2 = device.info?.tpu2 ?? 1
                         device3 = device.info?.tpu3 ?? 1
                         battery = device.info?.batteryLevel ?? 1
+                        signalStrength = device.info?.signalStrength ?? .weak
                     }
                     .allowsHitTesting(!bluetoothManager.isWriting)
                     

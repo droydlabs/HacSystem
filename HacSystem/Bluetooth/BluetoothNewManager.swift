@@ -131,8 +131,8 @@ extension BluetoothNewManager: CBCentralManagerDelegate {
             
             guard message == nil else { return }
             
-            let info = DeviceInfo(batteryLevel: batteryBar, tpu1: tpu1, tpu2: tpu2, tpu3: tpu3)
-
+            let strength = getSignalStrength(rssi: RSSI.intValue)
+            let info = DeviceInfo(batteryLevel: batteryBar, tpu1: tpu1, tpu2: tpu2, tpu3: tpu3, signalStrength: strength)
             let updatedDevice = DiscoveredDevice(id: device.id,name: device.name,
                                                 advertisementData: device.advertisementData, info: info)
 
@@ -162,6 +162,10 @@ extension BluetoothNewManager: CBCentralManagerDelegate {
         guard message != nil else { return }
         
         peripheral.discoverServices([CBUUID(string: "6E400001-B5A3-F393-E0A9-E50E24DCCA9E")])
+        
+        Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { _ in
+            peripheral.readRSSI()
+        }
     }
 }
 
@@ -219,6 +223,32 @@ extension BluetoothNewManager: CBPeripheralDelegate {
         }
     }
     
+    func peripheral(_ peripheral: CBPeripheral, didReadRSSI RSSI: NSNumber, error: (any Error)?) {
+        guard let selectedDevice = selectedDevices.first(where: { $0.id == selectedDeviceId }), let info = selectedDevice.info,
+                let index = self.selectedDevices.firstIndex(where: { $0.id == selectedDevice.id }) else { return }
+
+        if let error = error {
+            print("Failed to read RSSI: \(error.localizedDescription)")
+        } else {
+            print("Current RSSI: \(RSSI.intValue) dBm")
+            
+            let strength = getSignalStrength(rssi: RSSI.intValue)
+
+            let newInfo = DeviceInfo(batteryLevel: info.batteryLevel, tpu1: info.tpu1, tpu2: info.tpu2, tpu3: info.tpu3, signalStrength: strength)
+            let updatedDevice = DiscoveredDevice(id: selectedDevice.id,name: selectedDevice.name,
+                                                advertisementData: selectedDevice.advertisementData, info: newInfo)
+            self.selectedDevices[index] = updatedDevice
+        }
+    }
+    
+    func getSignalStrength(rssi: Int) -> SignalStrength {
+        return switch rssi {
+        case let x where x >= -60: .strong
+        case -80 ... -61: .average
+        default: .weak
+        }
+    }
+    
 }
 
 struct DeviceInfo {
@@ -226,6 +256,7 @@ struct DeviceInfo {
     var tpu1: Int?
     var tpu2: Int?
     var tpu3: Int?
+    var signalStrength: SignalStrength?
 }
 
 struct DiscoveredDevice: Identifiable, Equatable {
